@@ -427,16 +427,19 @@ class DashboardRenderer:
             f"{disk_used:.1f}/{disk_total:.1f} GiB",
             COL, (80, 160, 200))
 
-        # Row 3: DISK I/O with bars
+        # Row 3: DISK I/O (single bar, highest direction)
         dy = r[2]
-        draw.rectangle([6, dy, W - 6, dy + 50], fill=(22, 24, 36), outline=(40, 50, 70))
+        draw.rectangle([6, dy, W - 6, dy + 48], fill=(22, 24, 36), outline=(40, 50, 70))
         draw.text((16, dy + 6), "DISK I/O", fill=(255, 255, 255), font=font_md)
-        # scale: 500 MB/s = 100%
         max_bw = 500 * 1024 * 1024
-        mini_bar(dy + 24, dr_bytes / max_bw * 100, (60, 200, 100),
-                 f"R  {fmt_speed(dr_bytes)}/s")
-        mini_bar(dy + 38, dw_bytes / max_bw * 100, (100, 180, 255),
-                 f"W  {fmt_speed(dw_bytes)}/s")
+        io_pct = max(dr_bytes, dw_bytes) / max_bw * 100
+        by = dy + 24
+        bw = W - 32
+        draw.rounded_rectangle([16, by, 16 + bw, by + 10], radius=3, fill=(40, 50, 70))
+        fw = max(4, int(bw * min(io_pct, 100) / 100))
+        draw.rounded_rectangle([16, by, 16 + fw, by + 10], radius=3, fill=(60, 200, 100))
+        draw.text((16, by + 14), f"R {fmt_speed(dr_bytes)}/s", fill=(60, 200, 100), font=font_sm)
+        draw.text((COL + 16, by + 14), f"W {fmt_speed(dw_bytes)}/s", fill=(100, 180, 255), font=font_sm)
 
         # Row 4: NET full-width
         ny = r[3]
