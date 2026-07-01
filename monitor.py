@@ -262,17 +262,30 @@ class SystemStats:
             return 0, 0
 
     @staticmethod
+    def _root_dev() -> str:
+        try:
+            r = subprocess.run(["findmnt", "-n", "-o", "SOURCE", "/"],
+                               capture_output=True, text=True, timeout=3)
+            src = r.stdout.strip()
+            kernel = os.path.basename(os.path.realpath(src))
+            if kernel and not kernel.startswith("loop"):
+                return kernel
+        except Exception:
+            pass
+        for guess in ("sda", "nvme0n1", "vda", "mmcblk0", "sdb"):
+            if os.path.exists(f"/sys/block/{guess}"):
+                return guess
+        return "sda"
+
+    @staticmethod
     def disk_io() -> tuple:
         try:
+            dev = SystemStats._root_dev()
             with open("/proc/diskstats") as f:
-                lines = f.readlines()
-            for line in lines:
-                parts = line.split()
-                if len(parts) < 14:
-                    continue
-                name = parts[2]
-                if name in ("sda", "nvme0n1", "vda", "mmcblk0"):
-                    return int(parts[5]), int(parts[9])
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 14 and parts[2] == dev:
+                        return int(parts[5]), int(parts[9])
             return 0, 0
         except Exception:
             return 0, 0
